@@ -168,37 +168,40 @@ class _CartoonizeHomePageState extends State<CartoonizeHomePage> {
     return Padding(
       padding: const EdgeInsets.all(16.0),
       child: SingleChildScrollView(
-        child: SizedBox(
-          height: 610,
-          child: Column(
-            children: [
-              const SizedBox(height: 20),
-              Wrap(
-                children: [
-                  _originalImage != null
+        child: Column(
+          children: [
+            const SizedBox(height: 20),
+            Wrap(
+              children: [
+                SizedBox(
+                  height: 200,
+                  child: _originalImage != null
                       ? Image.memory(_originalImage!, height: 200)
                       : const Text("No image selected"),
-                  const SizedBox(
-                    height: 20,
-                    width: 20,
-                  ),
-                  if (_isProcessing) const CircularProgressIndicator(),
-                  _cartoonImage != null
+                ),
+                const SizedBox(
+                  height: 20,
+                  width: 20,
+                ),
+                if (_isProcessing) const CircularProgressIndicator(),
+                SizedBox(
+                  height: 200,
+                  child: _cartoonImage != null
                       ? Image.memory(_cartoonImage!, height: 200)
                       : const Text("Cartoonized image will appear here"),
-                ],
-              ),
-              const SizedBox(height: 20),
-              _buildSliders(),
-              const SizedBox(height: 20),
-              _buildProcessStepsView(),
-              const SizedBox(height: 20),
-              ElevatedButton(
-                onPressed: pickImage,
-                child: const Text("Pick Image"),
-              ),
-            ],
-          ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 20),
+            _buildSliders(),
+            const SizedBox(height: 20),
+            _buildProcessStepsView(),
+            const SizedBox(height: 20),
+            ElevatedButton(
+              onPressed: pickImage,
+              child: const Text("Pick Image"),
+            ),
+          ],
         ),
       ),
     );
