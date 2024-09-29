@@ -31,6 +31,7 @@ class _CartoonizeAppState extends State<CartoonizeApp> {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       title: 'Cartoonize App',
+      themeMode: _themeMode,
       theme: ThemeData(
         primarySwatch: Colors.blue,
         brightness: Brightness.light,
@@ -39,7 +40,6 @@ class _CartoonizeAppState extends State<CartoonizeApp> {
         primarySwatch: Colors.blue,
         brightness: Brightness.dark,
       ),
-      themeMode: _themeMode,
       home: Scaffold(
         appBar: AppBar(
           title: const Text('Cartoonize Image'),
@@ -79,109 +79,11 @@ class CartoonizeHomePage extends StatelessWidget {
             child: Column(
               children: [
                 const SizedBox(height: 20),
-                Wrap(
-                  alignment: WrapAlignment.center,
-                  spacing: 20,
-                  runSpacing: 20,
-                  children: [
-                    // Original Image with AnimatedSwitcher
-                    AnimatedSwitcher(
-                      duration: const Duration(milliseconds: 500),
-                      transitionBuilder:
-                          (Widget child, Animation<double> animation) {
-                        return FadeTransition(
-                          opacity: animation,
-                          child: child,
-                        );
-                      },
-                      child: controller.originalImage != null
-                          ? Container(
-                              key: const ValueKey('originalImage'),
-                              height: 200,
-                              width: MediaQuery.sizeOf(context).width / 4 - 50,
-                              decoration: BoxDecoration(
-                                border: Border.all(color: Colors.grey),
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              child: Image.memory(
-                                controller.originalImage!,
-                                height: 200,
-                                fit: BoxFit.cover,
-                              ),
-                            )
-                          : Container(
-                              key: const ValueKey('noImage'),
-                              height: 200,
-                              width: MediaQuery.sizeOf(context).width / 4 - 50,
-                              decoration: BoxDecoration(
-                                border: Border.all(color: Colors.grey),
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              child: const Center(
-                                child: Text("No image selected"),
-                              ),
-                            ),
-                    ),
-                    // Cartoonized Image or Loading Indicator with AnimatedSwitcher
-                    AnimatedSwitcher(
-                      duration: const Duration(milliseconds: 500),
-                      transitionBuilder:
-                          (Widget child, Animation<double> animation) {
-                        return FadeTransition(
-                          opacity: animation,
-                          child: child,
-                        );
-                      },
-                      child: controller.isProcessing
-                          ? Container(
-                              key: const ValueKey('loading'),
-                              height: 200,
-                              width: MediaQuery.sizeOf(context).width / 4 - 50,
-                              decoration: BoxDecoration(
-                                border: Border.all(color: Colors.grey),
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              child: const Center(
-                                child: CircularProgressIndicator(),
-                              ),
-                            )
-                          : controller.cartoonImage != null
-                              ? Container(
-                                  key: const ValueKey('cartoonImage'),
-                                  height: 200,
-                                  width:
-                                      MediaQuery.sizeOf(context).width / 4 - 50,
-                                  decoration: BoxDecoration(
-                                    border: Border.all(color: Colors.grey),
-                                    borderRadius: BorderRadius.circular(8),
-                                  ),
-                                  child: Image.memory(
-                                    controller.cartoonImage!,
-                                    height: 200,
-                                    fit: BoxFit.cover,
-                                  ),
-                                )
-                              : Container(
-                                  key: const ValueKey('noCartoonImage'),
-                                  height: 200,
-                                  width:
-                                      MediaQuery.sizeOf(context).width / 4 - 50,
-                                  decoration: BoxDecoration(
-                                    border: Border.all(color: Colors.grey),
-                                    borderRadius: BorderRadius.circular(8),
-                                  ),
-                                  child: const Center(
-                                    child: Text(
-                                        "Cartoonized image will appear here"),
-                                  ),
-                                ),
-                    ),
-                  ],
-                ),
+                ResponsiveImageDisplay(controller: controller),
                 const SizedBox(height: 20),
-                _buildSliders(context, controller),
+                const SlidersWidget(),
                 const SizedBox(height: 20),
-                _buildProcessStepsView(context, controller),
+                const ProcessStepsView(),
                 const SizedBox(height: 20),
                 ElevatedButton(
                   onPressed: () => controller.pickImage(context),
@@ -194,9 +96,277 @@ class CartoonizeHomePage extends StatelessWidget {
       },
     );
   }
+}
 
-  /// Widget to display the sliders for configuration
-  Widget _buildSliders(BuildContext context, CartoonizeController controller) {
+/// Widget to handle animated transitions
+class AnimatedSwitcherWidget extends StatelessWidget {
+  final Widget child;
+  final String keyValue;
+
+  const AnimatedSwitcherWidget({
+    Key? key,
+    required this.child,
+    required this.keyValue,
+  }) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedSwitcher(
+      duration: const Duration(milliseconds: 500),
+      transitionBuilder: (Widget child, Animation<double> animation) {
+        return FadeTransition(
+          opacity: animation,
+          child: child,
+        );
+      },
+      child: child,
+    );
+  }
+}
+
+/// Widget to display original and cartoonized images responsively
+class ResponsiveImageDisplay extends StatelessWidget {
+  final CartoonizeController controller;
+
+  const ResponsiveImageDisplay({Key? key, required this.controller})
+      : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    // Determine screen width for responsive layout
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isWideScreen = screenWidth > 600;
+
+    return isWideScreen
+        ? Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              // Original Image
+              Expanded(
+                child: AnimatedSwitcherWidget(
+                  keyValue: controller.originalImage != null
+                      ? 'originalImage'
+                      : 'noImage',
+                  child: controller.originalImage != null
+                      ? Container(
+                          height: 200,
+                          decoration: BoxDecoration(
+                            border: Border.all(color: Colors.grey),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(8),
+                            child: Image.memory(
+                              controller.originalImage!,
+                              // height: 200,
+                              fit: BoxFit.contain,
+                            ),
+                          ),
+                        )
+                      : Container(
+                          height: 200,
+                          decoration: BoxDecoration(
+                            border: Border.all(color: Colors.grey),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: const Center(
+                            child: Text("No image selected"),
+                          ),
+                        ),
+                ),
+              ),
+              const SizedBox(width: 20),
+              // Cartoonized Image or Loading Indicator
+              Expanded(
+                child: AnimatedSwitcherWidget(
+                  keyValue: controller.isProcessing
+                      ? 'loading'
+                      : controller.cartoonImage != null
+                          ? 'cartoonImage'
+                          : 'noCartoonImage',
+                  child: controller.isProcessing
+                      ? Container(
+                          height: 200,
+                          decoration: BoxDecoration(
+                            border: Border.all(color: Colors.grey),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: const Center(
+                            child: CircularProgressIndicator(),
+                          ),
+                        )
+                      : controller.cartoonImage != null
+                          ? Stack(
+                              children: [
+                                Container(
+                                  height: 200,
+                                  decoration: BoxDecoration(
+                                    border: Border.all(color: Colors.grey),
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: ClipRRect(
+                                    borderRadius: BorderRadius.circular(8),
+                                    child: Image.memory(
+                                      controller.cartoonImage!,
+                                      // height: 200,
+                                      fit: BoxFit.contain,
+                                    ),
+                                  ),
+                                ),
+                                // // Positioned Save Button
+                                // Positioned(
+                                //   bottom: 8,
+                                //   right: 8,
+                                //   child: ElevatedButton.icon(
+                                //     onPressed: () {
+                                //       controller.saveCartoonImage(context);
+                                //     },
+                                //     icon: const Icon(Icons.save),
+                                //     label: const Text("Save"),
+                                //     style: ElevatedButton.styleFrom(
+                                //       // primary: Colors.blueAccent.withOpacity(0.8),
+                                //       padding: const EdgeInsets.symmetric(
+                                //           horizontal: 12, vertical: 8),
+                                //       textStyle:
+                                //           const TextStyle(fontSize: 12),
+                                //     ),
+                                //   ),
+                                // ),
+                              ],
+                            )
+                          : Container(
+                              height: 200,
+                              decoration: BoxDecoration(
+                                border: Border.all(color: Colors.grey),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: const Center(
+                                child:
+                                    Text("Cartoonized image will appear here"),
+                              ),
+                            ),
+                ),
+              ),
+            ],
+          )
+        : Column(
+            children: [
+              // Original Image
+              AnimatedSwitcherWidget(
+                keyValue: controller.originalImage != null
+                    ? 'originalImage'
+                    : 'noImage',
+                child: controller.originalImage != null
+                    ? Container(
+                        height: 200,
+                        width: double.infinity,
+                        decoration: BoxDecoration(
+                          border: Border.all(color: Colors.grey),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(8),
+                          child: Image.memory(
+                            controller.originalImage!,
+                            // height: 200,
+                            fit: BoxFit.contain,
+                          ),
+                        ),
+                      )
+                    : Container(
+                        height: 200,
+                        width: double.infinity,
+                        decoration: BoxDecoration(
+                          border: Border.all(color: Colors.grey),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: const Center(
+                          child: Text("No image selected"),
+                        ),
+                      ),
+              ),
+              const SizedBox(height: 20),
+              // Cartoonized Image or Loading Indicator
+              AnimatedSwitcherWidget(
+                keyValue: controller.isProcessing
+                    ? 'loading'
+                    : controller.cartoonImage != null
+                        ? 'cartoonImage'
+                        : 'noCartoonImage',
+                child: controller.isProcessing
+                    ? Container(
+                        height: 200,
+                        width: double.infinity,
+                        decoration: BoxDecoration(
+                          border: Border.all(color: Colors.grey),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: const Center(
+                          child: CircularProgressIndicator(),
+                        ),
+                      )
+                    : controller.cartoonImage != null
+                        ? Stack(
+                            children: [
+                              Container(
+                                height: 200,
+                                width: double.infinity,
+                                decoration: BoxDecoration(
+                                  border: Border.all(color: Colors.grey),
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: ClipRRect(
+                                  borderRadius: BorderRadius.circular(8),
+                                  child: Image.memory(
+                                    controller.cartoonImage!,
+                                    fit: BoxFit.contain,
+                                  ),
+                                ),
+                              ),
+                              // // Positioned Save Button
+                              // Positioned(
+                              //   bottom: 8,
+                              //   right: 8,
+                              //   child: ElevatedButton.icon(
+                              //     onPressed: () {
+                              //       controller.saveCartoonImage(context);
+                              //     },
+                              //     icon: const Icon(Icons.save),
+                              //     label: const Text("Save"),
+                              //     style: ElevatedButton.styleFrom(
+                              //       primary: Colors.blueAccent.withOpacity(0.8),
+                              //       padding: const EdgeInsets.symmetric(
+                              //           horizontal: 12, vertical: 8),
+                              //       textStyle: const TextStyle(fontSize: 12),
+                              //     ),
+                              //   ),
+                              // ),
+                            ],
+                          )
+                        : Container(
+                            height: 200,
+                            width: double.infinity,
+                            decoration: BoxDecoration(
+                              border: Border.all(color: Colors.grey),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: const Center(
+                              child: Text("Cartoonized image will appear here"),
+                            ),
+                          ),
+              ),
+            ],
+          );
+  }
+}
+
+/// Widget for Sliders
+class SlidersWidget extends StatelessWidget {
+  const SlidersWidget({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final controller = Provider.of<CartoonizeController>(context);
     final blurConfig = controller.blurSliderConfigs;
     final thresholdConfig = controller.thresholdSliderConfigs;
 
@@ -243,10 +413,16 @@ class CartoonizeHomePage extends StatelessWidget {
       ],
     );
   }
+}
 
-  /// Widget to display process steps (left-to-right)
-  Widget _buildProcessStepsView(
-      BuildContext context, CartoonizeController controller) {
+/// Widget to display processing steps
+class ProcessStepsView extends StatelessWidget {
+  const ProcessStepsView({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final controller = Provider.of<CartoonizeController>(context);
+
     if (controller.processSteps.isEmpty) {
       return const Text("Processing steps will appear here.");
     }
@@ -265,11 +441,14 @@ class CartoonizeHomePage extends StatelessWidget {
                 },
                 child: Column(
                   children: [
-                    Image.memory(
-                      controller.processSteps[index].outputImage,
-                      width: 80,
-                      height: 80,
-                      fit: BoxFit.cover,
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(8),
+                      child: Image.memory(
+                        controller.processSteps[index].outputImage,
+                        width: 80,
+                        height: 80,
+                        fit: BoxFit.contain,
+                      ),
                     ),
                     Text(controller.processSteps[index].stepName),
                   ],
@@ -284,12 +463,13 @@ class CartoonizeHomePage extends StatelessWidget {
     );
   }
 
+  /// Function to show a dialog with step input/output details
   void _showStepDialog(BuildContext context, ProcessStep step) {
     showDialog(
       context: context,
       builder: (context) {
         // Get the screen width to determine layout orientation
-        final screenWidth = MediaQuery.sizeOf(context).width;
+        final screenWidth = MediaQuery.of(context).size.width;
         final isWideScreen = screenWidth > 600;
 
         return Dialog(
@@ -298,7 +478,8 @@ class CartoonizeHomePage extends StatelessWidget {
           ),
           child: Container(
             padding: const EdgeInsets.all(16.0),
-            width: screenWidth * 0.8, // Set width to 80% of screen width
+            width:
+                screenWidth > 800 ? 600 : screenWidth * 0.8, // Responsive width
             child: SingleChildScrollView(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -311,28 +492,27 @@ class CartoonizeHomePage extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 20),
-                  // If the screen is wide, show images side-by-side
+                  // Responsive Layout
                   isWideScreen
                       ? Row(
                           mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                           children: [
-                            _buildImageWithLabel(step.inputImage, "Input Image",
-                                screenWidth * 0.3),
+                            _buildImageWithLabel(
+                                step.inputImage, "Input Image", 200),
                             const Icon(Icons.arrow_forward, size: 40),
-                            _buildImageWithLabel(step.outputImage,
-                                "Output Image", screenWidth * 0.3),
+                            _buildImageWithLabel(
+                                step.outputImage, "Output Image", 200),
                           ],
                         )
-                      // If the screen is narrow, show images stacked vertically
                       : Column(
                           children: [
-                            _buildImageWithLabel(step.inputImage, "Input Image",
-                                screenWidth * 0.7),
+                            _buildImageWithLabel(
+                                step.inputImage, "Input Image", 200),
                             const SizedBox(height: 10),
                             const Icon(Icons.arrow_downward, size: 40),
                             const SizedBox(height: 10),
-                            _buildImageWithLabel(step.outputImage,
-                                "Output Image", screenWidth * 0.7),
+                            _buildImageWithLabel(
+                                step.outputImage, "Output Image", 200),
                           ],
                         ),
                 ],
@@ -348,11 +528,14 @@ class CartoonizeHomePage extends StatelessWidget {
   Widget _buildImageWithLabel(Uint8List image, String label, double imageSize) {
     return Column(
       children: [
-        Image.memory(
-          image,
-          width: imageSize,
-          height: imageSize,
-          fit: BoxFit.cover,
+        ClipRRect(
+          borderRadius: BorderRadius.circular(8),
+          child: Image.memory(
+            image,
+            width: imageSize,
+            height: imageSize,
+            fit: BoxFit.contain,
+          ),
         ),
         const SizedBox(height: 5),
         Text(label),
