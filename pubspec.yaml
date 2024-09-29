@@ -37,6 +37,7 @@ dependencies:
   cupertino_icons: ^1.0.8
   opencv_dart: ^1.2.4
   image_picker: ^1.1.2
+  provider: ^6.1.2
 
 dev_dependencies:
   flutter_test:
