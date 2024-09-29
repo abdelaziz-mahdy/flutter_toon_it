@@ -1,7 +1,7 @@
-// ignore_for_file: public_member_api_docs, sort_constructors_first
+// lib/controllers/cartoonize_controller.dart
+
 import 'dart:async';
 import 'dart:typed_data';
-
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 
@@ -9,16 +9,20 @@ import '../models/process_step.dart';
 import '../services/cartoonize_service.dart';
 
 class SliderConfigs {
-  int defaultValue;
-  int minValue;
-  int maxValue;
+  final int defaultValue;
+  final int minValue;
+  final int maxValue;
+  final int step;
+
   SliderConfigs({
     required this.defaultValue,
     required this.minValue,
     required this.maxValue,
+    this.step = 1,
   });
 
-  int get divisions => (maxValue - minValue).toInt();
+  /// Calculates the number of divisions based on step.
+  int get divisions => ((maxValue - minValue) / step).round();
 }
 
 class CartoonizeController extends ChangeNotifier {
@@ -30,14 +34,18 @@ class CartoonizeController extends ChangeNotifier {
   List<ProcessStep> processSteps = [];
   bool isProcessing = false;
 
-  // Configuration values for sliders
-  SliderConfigs blurSliderConfigs =
-      SliderConfigs(defaultValue: 0, minValue: 0, maxValue: 100);
+  // Slider Configurations
+  final SliderConfigs blurSliderConfigs =
+      SliderConfigs(defaultValue: 0, minValue: 0, maxValue: 100, step: 2);
+  final SliderConfigs thresholdSliderConfigs =
+      SliderConfigs(defaultValue: 9, minValue: 3, maxValue: 51, step: 2);
+
   int blurSigma = 0;
   int thresholdValue = 9;
 
-  // To enforce 100ms gap between requests
-  DateTime _lastRequestTime = DateTime.fromMillisecondsSinceEpoch(0);
+  // Debounce Timer
+  Timer? _debounceTimer;
+  static const Duration debounceDuration = Duration(milliseconds: 200);
 
   /// Picks an image from the gallery and starts the cartoonization process.
   Future<void> pickImage(BuildContext context) async {
@@ -54,13 +62,6 @@ class CartoonizeController extends ChangeNotifier {
   /// Applies the cartoonization process using the service.
   Future<void> applyCartoonize(
       BuildContext context, Uint8List imageBytes) async {
-    final now = DateTime.now();
-    if (now.difference(_lastRequestTime).inMilliseconds < 100) {
-      // Ignore the request
-      return;
-    }
-    _lastRequestTime = now;
-
     isProcessing = true;
     processSteps = [];
     notifyListeners();
@@ -98,31 +99,50 @@ class CartoonizeController extends ChangeNotifier {
     }
   }
 
-  /// Updates the blur sigma and re-applies cartoonization.
+  /// Updates the blur sigma and re-applies cartoonization with debounce.
   Future<void> updateBlurSigma(BuildContext context, double value) async {
     blurSigma = value.toInt();
-    if (blurSigma % 2 == 0 && blurSigma > 0) {
+    // Ensure blurSigma is odd if greater than 0
+    if (blurSigma > 0 && blurSigma % 2 == 0) {
       blurSigma += 1;
+      if (blurSigma > blurSliderConfigs.maxValue) {
+        blurSigma -= 2; // Adjust if exceeds maxValue
+      }
     }
-    blurSigma = blurSigma < 0 ? 0 : blurSigma;
     notifyListeners();
-
-    if (originalImage != null) {
-      await applyCartoonize(context, originalImage!);
-    }
+    _debounceApplyCartoonize(context);
   }
 
-  /// Updates the threshold value and re-applies cartoonization.
+  /// Updates the threshold value and re-applies cartoonization with debounce.
   Future<void> updateThresholdValue(BuildContext context, double value) async {
     thresholdValue = value.toInt();
+    // Ensure thresholdValue is odd and >=3
     if (thresholdValue % 2 == 0) {
       thresholdValue += 1;
+      if (thresholdValue > thresholdSliderConfigs.maxValue) {
+        thresholdValue -= 2; // Adjust if exceeds maxValue
+      }
     }
-    thresholdValue = thresholdValue <= 1 ? 3 : thresholdValue;
+    if (thresholdValue < thresholdSliderConfigs.minValue) {
+      thresholdValue = thresholdSliderConfigs.minValue;
+    }
     notifyListeners();
+    _debounceApplyCartoonize(context);
+  }
 
-    if (originalImage != null) {
-      await applyCartoonize(context, originalImage!);
-    }
+  /// Debounce function to handle rapid consecutive requests.
+  void _debounceApplyCartoonize(BuildContext context) {
+    _debounceTimer?.cancel();
+    _debounceTimer = Timer(debounceDuration, () {
+      if (originalImage != null) {
+        applyCartoonize(context, originalImage!);
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _debounceTimer?.cancel();
+    super.dispose();
   }
 }
